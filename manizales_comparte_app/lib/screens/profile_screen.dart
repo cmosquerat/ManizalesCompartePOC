@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../config/theme.dart';
 import '../data/mock_data.dart';
 import '../providers/app_state.dart';
+// kGlosarioPaisa proviene de mock_data.dart
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -284,6 +285,15 @@ class ProfileScreen extends StatelessWidget {
               )),
 
           const SizedBox(height: 24),
+
+          // Cambiar a Modo Negocio
+          _RoleSwitch(),
+          const SizedBox(height: 14),
+
+          // Glosario manizaleño
+          _GlosarioCard(),
+          const SizedBox(height: 24),
+
           Center(
             child: Column(
               children: [
@@ -295,6 +305,158 @@ class ProfileScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+}
+
+class _RoleSwitch extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1D1D1B), Color(0xFF2D2D2A)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [AppColors.rojo, AppColors.amarillo]),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(Icons.storefront_rounded, color: Colors.white, size: 24),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('¿Tienes un negocio?',
+                    style: GoogleFonts.montserrat(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white)),
+                const SizedBox(height: 3),
+                Text('Entra al modo aliado y administra tus productos, promociones y canjes',
+                    style: GoogleFonts.poppins(fontSize: 11, color: Colors.white70, height: 1.3)),
+                const SizedBox(height: 10),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    context.read<AppState>().switchRole(AppRole.business);
+                  },
+                  icon: const Icon(Icons.arrow_forward_rounded, size: 16),
+                  label: Text('Entrar como El Sombrerero',
+                      style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.amarillo,
+                    foregroundColor: AppColors.negro,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GlosarioCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.translate_rounded, color: AppColors.rojo, size: 18),
+              const SizedBox(width: 8),
+              Text('Vocabulario manizaleño',
+                  style: GoogleFonts.montserrat(fontSize: 14, fontWeight: FontWeight.w700)),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text('Pa\'que no quedes mal en la conversa',
+              style: GoogleFonts.poppins(fontSize: 11, color: AppColors.gris)),
+          const SizedBox(height: 12),
+          ...kGlosarioPaisa.entries.take(5).map((e) => Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 90,
+                      child: Text(e.key,
+                          style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.rojo)),
+                    ),
+                    Expanded(
+                      child: Text(e.value,
+                          style: GoogleFonts.poppins(fontSize: 11.5, color: AppColors.negro, height: 1.4)),
+                    ),
+                  ],
+                ),
+              )),
+          TextButton(
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (_) => Dialog(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Vocabulario completo',
+                            style: GoogleFonts.montserrat(fontSize: 16, fontWeight: FontWeight.w800)),
+                        const SizedBox(height: 12),
+                        ...kGlosarioPaisa.entries.map((e) => Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  SizedBox(
+                                    width: 90,
+                                    child: Text(e.key,
+                                        style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.rojo)),
+                                  ),
+                                  Expanded(child: Text(e.value, style: GoogleFonts.poppins(fontSize: 11.5))),
+                                ],
+                              ),
+                            )),
+                        const SizedBox(height: 8),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: Text('Cerrar', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+            child: Text('Ver todo el glosario →',
+                style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.rojo)),
+          ),
         ],
       ),
     );

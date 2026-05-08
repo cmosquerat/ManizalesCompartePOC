@@ -14,6 +14,7 @@ dependencies:
   latlong2:
   google_fonts:
   flutter_svg:
+  fl_chart:
 
 dev_dependencies:
   flutter_test:

@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../data/mock_data.dart';
 
+enum AppRole { citizen, business }
+
+enum MapLayer { tapas, eventos, negocios }
+
 class AppState extends ChangeNotifier {
   bool onboardingDone = false;
   int ferminesBalance = 150;
@@ -23,6 +27,24 @@ class AppState extends ChangeNotifier {
   int streakDays = 3;
   final Set<String> completedChallengeIds = {};
   int totalChallengesCompleted = 0;
+
+  // Eventos sociales (inscripciones)
+  final Set<String> enrolledEventIds = {};
+
+  // Capas activas en el mapa
+  final Set<MapLayer> activeLayers = {MapLayer.tapas, MapLayer.eventos, MapLayer.negocios};
+
+  // Filtro por sector (null = todos)
+  String? selectedSector;
+
+  // Modo App: turista / negocio
+  AppRole role = AppRole.citizen;
+  String activeBusinessId = 'biz_sombrerero';
+  Business get activeBusiness =>
+      kBusinesses.firstWhere((b) => b.id == activeBusinessId);
+
+  // Canjes simulados desde el lado del aliado
+  final List<Redemption> liveRedemptions = [];
   double get multiplier {
     double m = 1.0;
     if (activeMembershipId != 'mem_free') {
@@ -156,6 +178,83 @@ class AppState extends ChangeNotifier {
     );
     notifyListeners();
   }
+
+  // ===== Eventos sociales =====
+  bool isEnrolled(String eventId) => enrolledEventIds.contains(eventId);
+
+  void enrollInEvent(SocialEvent event) {
+    if (enrolledEventIds.contains(event.id)) return;
+    enrolledEventIds.add(event.id);
+    transactions.insert(
+      0,
+      FerminTransaction(
+        id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
+        description: 'Inscripción: ${event.titulo}',
+        amount: 0,
+        date: DateTime.now(),
+        type: TransactionType.earn,
+      ),
+    );
+    notifyListeners();
+  }
+
+  void completeEvent(SocialEvent event) {
+    if (!enrolledEventIds.contains(event.id)) return;
+    final reward = (event.recompensaFermines * multiplier).round();
+    ferminesBalance += reward;
+    transactions.insert(
+      0,
+      FerminTransaction(
+        id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
+        description: 'Jornada ${event.programa.nombre}: ${event.titulo}',
+        amount: reward,
+        date: DateTime.now(),
+        type: TransactionType.earn,
+      ),
+    );
+    notifyListeners();
+  }
+
+  // ===== Capas / filtros del mapa =====
+  void toggleLayer(MapLayer layer) {
+    if (activeLayers.contains(layer)) {
+      activeLayers.remove(layer);
+    } else {
+      activeLayers.add(layer);
+    }
+    notifyListeners();
+  }
+
+  void setSectorFilter(String? sector) {
+    selectedSector = sector;
+    notifyListeners();
+  }
+
+  // ===== Modo negocio =====
+  void switchRole(AppRole newRole) {
+    role = newRole;
+    notifyListeners();
+  }
+
+  void simulateRedemption(BusinessProduct product) {
+    final r = Redemption(
+      id: 'red_live_${DateTime.now().millisecondsSinceEpoch}',
+      businessId: product.businessId,
+      userName: 'Turista demo',
+      productName: product.nombre,
+      totalFermines: product.precioFermines,
+      totalCOP: product.precioCOP,
+      fecha: DateTime.now(),
+      origen: 'turista',
+    );
+    liveRedemptions.insert(0, r);
+    notifyListeners();
+  }
+
+  List<Redemption> redemptionsFor(String businessId) => [
+        ...liveRedemptions.where((r) => r.businessId == businessId),
+        ...kRedemptions.where((r) => r.businessId == businessId),
+      ];
 
   void subscribeMembership(Membership membership) {
     activeMembershipId = membership.id;

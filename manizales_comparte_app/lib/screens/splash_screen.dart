@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import '../config/manizales_context.dart';
 import '../config/theme.dart';
 import '../providers/app_state.dart';
 import 'onboarding_screen.dart';
@@ -175,6 +176,40 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                   ),
                 ],
+              ),
+            ),
+
+            // Dato curioso de Manizales abajo
+            Positioned(
+              left: 24,
+              right: 24,
+              bottom: 36,
+              child: AnimatedBuilder(
+                animation: _textCtrl,
+                builder: (_, __) => Opacity(
+                  opacity: _textFade.value * 0.85,
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.06),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.lightbulb_rounded, color: AppColors.amarillo, size: 16),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            ManizalesContext.datoCurioso(),
+                            textAlign: TextAlign.start,
+                            style: GoogleFonts.poppins(fontSize: 11, color: Colors.white70, height: 1.4),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
           ],
