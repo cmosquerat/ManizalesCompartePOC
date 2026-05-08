@@ -84,8 +84,8 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
         FlutterMap(
           mapController: _mapCtrl,
           options: MapOptions(
-            initialCenter: const LatLng(5.0645, -75.5215),
-            initialZoom: 14.2,
+            initialCenter: const LatLng(5.0660, -75.5180),
+            initialZoom: 14.6,
             onTap: (_, __) {
               _select(null);
               if (_showLayers) setState(() => _showLayers = false);
@@ -93,8 +93,9 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
           ),
           children: [
             TileLayer(
-              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+              urlTemplate: 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
               userAgentPackageName: 'com.manizalescomparte.app',
+              maxNativeZoom: 19,
             ),
 
             // Polígonos de sectores
@@ -205,47 +206,45 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
         // Header: ciudad + clima
         Positioned(
           top: pad.top + 10,
-          left: 16,
-          right: 16,
+          left: 12,
+          right: 12,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 16)],
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 14)],
             ),
             child: Row(
               children: [
-                const Icon(Icons.location_city_rounded, color: AppColors.rojo, size: 18),
-                const SizedBox(width: 6),
-                Text('Manizales', style: GoogleFonts.montserrat(fontSize: 14, fontWeight: FontWeight.w800)),
-                const SizedBox(width: 6),
-                Text('· 2.150 msnm', style: GoogleFonts.poppins(fontSize: 11, color: AppColors.gris)),
+                const Icon(Icons.location_city_rounded, color: AppColors.rojo, size: 16),
+                const SizedBox(width: 5),
+                Text('Manizales', style: GoogleFonts.montserrat(fontSize: 13, fontWeight: FontWeight.w800)),
+                const SizedBox(width: 4),
+                Text('· 2.150 msnm', style: GoogleFonts.poppins(fontSize: 10, color: AppColors.gris)),
                 const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.bg,
-                    borderRadius: BorderRadius.circular(10),
+                Flexible(
+                  child: Text(
+                    ManizalesContext.climaMock(),
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.poppins(fontSize: 9.5, fontWeight: FontWeight.w600),
                   ),
-                  child: Text(ManizalesContext.climaMock(),
-                      style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600)),
                 ),
               ],
             ),
           ),
         ),
 
-        // Filtros de sector
+        // Filtros de sector — compactos, sin icono
         Positioned(
           top: pad.top + 60,
           left: 0,
           right: 0,
           child: SizedBox(
-            height: 36,
+            height: 32,
             child: ListView(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               children: [
                 _SectorChip(
                   label: 'Todos',
@@ -253,14 +252,13 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
                   color: AppColors.rojo,
                   onTap: () => state.setSectorFilter(null),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 5),
                 ...kSectores.map((s) => Padding(
-                      padding: const EdgeInsets.only(right: 6),
+                      padding: const EdgeInsets.only(right: 5),
                       child: _SectorChip(
                         label: s.nombre,
                         selected: state.selectedSector == s.nombre,
                         color: s.color,
-                        icon: s.icono,
                         onTap: () => state.setSectorFilter(state.selectedSector == s.nombre ? null : s.nombre),
                       ),
                     )),
@@ -269,18 +267,18 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
           ),
         ),
 
-        // Brújula a tapa más cercana no capturada
+        // Brújula a tapa más cercana — debajo de los chips
         if (_nearestPending(state) != null)
           Positioned(
-            top: pad.top + 110,
-            left: 16,
+            top: pad.top + 100,
+            left: 12,
             child: _BrujulaCompacta(tapa: _nearestPending(state)!, distKm: _distKm(_nearestPending(state)!.lat, _nearestPending(state)!.lng)),
           ),
 
         // FAB capas + Fermines
         Positioned(
-          top: pad.top + 110,
-          right: 16,
+          top: pad.top + 100,
+          right: 12,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -465,42 +463,29 @@ class _SectorChip extends StatelessWidget {
   final String label;
   final bool selected;
   final Color color;
-  final IconData? icon;
   final VoidCallback onTap;
-  const _SectorChip({required this.label, required this.selected, required this.color, this.icon, required this.onTap});
+  const _SectorChip({required this.label, required this.selected, required this.color, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 0),
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 250),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-          decoration: BoxDecoration(
-            color: selected ? color : Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: selected ? color : Colors.grey.shade200),
-            boxShadow: selected
-                ? [BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 8)]
-                : [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 4)],
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (icon != null) ...[
-                Icon(icon, size: 13, color: selected ? Colors.white : color),
-                const SizedBox(width: 4),
-              ],
-              Text(label,
-                  style: GoogleFonts.poppins(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w700,
-                      color: selected ? Colors.white : AppColors.negro)),
-            ],
-          ),
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? color : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: selected ? color : Colors.grey.shade200),
+          boxShadow: selected
+              ? [BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 6)]
+              : [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 3)],
         ),
+        child: Text(label,
+            style: GoogleFonts.poppins(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
+                color: selected ? Colors.white : AppColors.negro)),
       ),
     );
   }
