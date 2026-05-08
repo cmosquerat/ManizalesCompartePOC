@@ -236,6 +236,11 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void switchBusiness(String businessId) {
+    activeBusinessId = businessId;
+    notifyListeners();
+  }
+
   void simulateRedemption(BusinessProduct product) {
     final r = Redemption(
       id: 'red_live_${DateTime.now().millisecondsSinceEpoch}',

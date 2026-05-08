@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../config/theme.dart';
+import '../../data/mock_data.dart';
 import '../../models/models.dart';
 import '../../providers/app_state.dart';
 import 'business_overview_tab.dart';
@@ -103,31 +104,38 @@ class _Sidebar extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(colors: [AppColors.rojo, Color(0xFFFFD122)]),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.storefront_rounded, color: Colors.white, size: 22),
+                Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(colors: [AppColors.rojo, Color(0xFFFFD122)]),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.storefront_rounded, color: Colors.white, size: 22),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(bizName,
+                              maxLines: 1, overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.montserrat(fontSize: 14, fontWeight: FontWeight.w800)),
+                          Text(bizSubtitle,
+                              maxLines: 1, overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.poppins(fontSize: 10, color: AppColors.gris)),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(bizName,
-                          maxLines: 1, overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.montserrat(fontSize: 14, fontWeight: FontWeight.w800)),
-                      Text(bizSubtitle,
-                          maxLines: 1, overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.poppins(fontSize: 10, color: AppColors.gris)),
-                    ],
-                  ),
-                ),
+                const SizedBox(height: 10),
+                _BusinessSelector(),
               ],
             ),
           ),
@@ -195,6 +203,46 @@ class _Sidebar extends StatelessWidget {
   }
 }
 
+class _BusinessSelector extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.bg,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: state.activeBusinessId,
+          isExpanded: true,
+          icon: const Icon(Icons.unfold_more_rounded, size: 16, color: AppColors.gris),
+          style: GoogleFonts.poppins(fontSize: 11.5, color: AppColors.negro, fontWeight: FontWeight.w600),
+          items: kBusinesses
+              .map((b) => DropdownMenuItem(
+                    value: b.id,
+                    child: Row(
+                      children: [
+                        Icon(b.tipo.icono, size: 13, color: AppColors.gris),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(b.nombre, overflow: TextOverflow.ellipsis),
+                        ),
+                      ],
+                    ),
+                  ))
+              .toList(),
+          onChanged: (v) {
+            if (v != null) context.read<AppState>().switchBusiness(v);
+          },
+        ),
+      ),
+    );
+  }
+}
+
 class _MobileTopbar extends StatelessWidget {
   final String bizName;
   final String bizSubtitle;
@@ -205,35 +253,41 @@ class _MobileTopbar extends StatelessWidget {
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
-      child: Row(
+      child: Column(
         children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [AppColors.rojo, Color(0xFFFFD122)]),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(Icons.storefront_rounded, color: Colors.white, size: 20),
+          Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [AppColors.rojo, Color(0xFFFFD122)]),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.storefront_rounded, color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(bizName, style: GoogleFonts.montserrat(fontSize: 14, fontWeight: FontWeight.w800)),
+                    Text(bizSubtitle, style: GoogleFonts.poppins(fontSize: 10, color: AppColors.gris)),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: 'Volver a app turista',
+                onPressed: () {
+                  context.read<AppState>().switchRole(AppRole.citizen);
+                  Navigator.pop(context);
+                },
+                icon: const Icon(Icons.swap_horiz_rounded, color: AppColors.negro),
+              ),
+            ],
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(bizName, style: GoogleFonts.montserrat(fontSize: 14, fontWeight: FontWeight.w800)),
-                Text(bizSubtitle, style: GoogleFonts.poppins(fontSize: 10, color: AppColors.gris)),
-              ],
-            ),
-          ),
-          IconButton(
-            tooltip: 'Volver a app turista',
-            onPressed: () {
-              context.read<AppState>().switchRole(AppRole.citizen);
-              Navigator.pop(context);
-            },
-            icon: const Icon(Icons.swap_horiz_rounded, color: AppColors.negro),
-          ),
+          const SizedBox(height: 8),
+          _BusinessSelector(),
         ],
       ),
     );
