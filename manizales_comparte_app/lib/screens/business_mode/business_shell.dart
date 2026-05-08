@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../config/theme.dart';
+import '../../models/models.dart';
 import '../../providers/app_state.dart';
 import 'business_overview_tab.dart';
 import 'business_products_tab.dart';
