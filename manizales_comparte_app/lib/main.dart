@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'config/theme.dart';
 import 'providers/app_state.dart';
-import 'widgets/phone_frame.dart';
 import 'screens/splash_screen.dart';
+import 'widgets/phone_frame.dart';
 
 class _WebScrollBehavior extends MaterialScrollBehavior {
   @override
@@ -35,7 +35,11 @@ class ManizalesComparteApp extends StatelessWidget {
         theme: AppTheme.light,
         scrollBehavior: _WebScrollBehavior(),
         builder: (context, child) {
-          if (kIsWeb && MediaQuery.of(context).size.width > 600) {
+          // En modo aliado el dashboard se renderiza a pantalla completa
+          // (es un panel de escritorio, no una app móvil).
+          final state = context.watch<AppState>();
+          final inBusiness = state.role == AppRole.business;
+          if (!inBusiness && kIsWeb && MediaQuery.of(context).size.width > 600) {
             return PhoneFrame(child: child!);
           }
           return child!;

@@ -708,7 +708,7 @@ const List<Business> kBusinesses = [
     tipo: BusinessType.cafe,
     descripcion:
         'Café Brunch & Cócteles en Av. Santander. Ambiente acogedor, repostería de autor y cafés de origen. A pasos de Estadio Palogrande.',
-    foto: 'assets/fotos/montana_magica.jpg',
+    foto: 'assets/fotos/el_sombrerero.jpg',
     logo: 'assets/images/Logo_positivo.svg',
     lat: 5.0625,
     lng: -75.5070,
