@@ -132,22 +132,7 @@ class _ProgramaCard extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [programa.color, programa.color.withValues(alpha: 0.7)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(color: programa.color.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4)),
-                    ],
-                  ),
-                  child: Icon(programa.icono, color: Colors.white, size: 26),
-                ),
+                _ProgramaAvatar(programa: programa, size: 60),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
@@ -199,6 +184,49 @@ String _fmtFecha(DateTime d) {
   return '${d.day} ${meses[d.month - 1]}';
 }
 
+class _ProgramaAvatar extends StatelessWidget {
+  final ProgramaSocial programa;
+  final double size;
+  const _ProgramaAvatar({required this.programa, this.size = 56});
+
+  @override
+  Widget build(BuildContext context) {
+    final logo = programa.logoAsset;
+    if (logo != null) {
+      return Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(size * 0.27),
+          border: Border.all(color: programa.color.withValues(alpha: 0.3), width: 1.5),
+          boxShadow: [
+            BoxShadow(color: programa.color.withValues(alpha: 0.18), blurRadius: 10, offset: const Offset(0, 3)),
+          ],
+        ),
+        padding: EdgeInsets.all(size * 0.08),
+        child: Image.asset(logo, fit: BoxFit.contain),
+      );
+    }
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [programa.color, programa.color.withValues(alpha: 0.7)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(size * 0.27),
+        boxShadow: [
+          BoxShadow(color: programa.color.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4)),
+        ],
+      ),
+      child: Icon(programa.icono, color: Colors.white, size: size * 0.45),
+    );
+  }
+}
+
 class ProgramaDetailScreen extends StatelessWidget {
   final ProgramaSocial programa;
   const ProgramaDetailScreen({super.key, required this.programa});
@@ -210,12 +238,14 @@ class ProgramaDetailScreen extends StatelessWidget {
     final state = context.watch<AppState>();
     final yaInscrito = eventos.where((e) => state.isEnrolled(e.id)).length;
 
+    final hero = programa.heroAsset;
+
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            expandedHeight: 220,
+            expandedHeight: 240,
             pinned: true,
             backgroundColor: programa.color,
             iconTheme: const IconThemeData(color: Colors.white),
@@ -225,26 +255,49 @@ class ProgramaDetailScreen extends StatelessWidget {
               background: Stack(
                 fit: StackFit.expand,
                 children: [
+                  // Foto hero o gradiente como fallback
+                  if (hero != null)
+                    Image.asset(hero, fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(color: programa.color))
+                  else
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [programa.color, programa.color.withValues(alpha: 0.6)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                      ),
+                    ),
+                  // Gradiente oscuro abajo para legibilidad del título
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [programa.color, programa.color.withValues(alpha: 0.6)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withValues(alpha: hero != null ? 0.15 : 0.0),
+                          Colors.transparent,
+                          Colors.black.withValues(alpha: hero != null ? 0.65 : 0.4),
+                        ],
+                        stops: const [0.0, 0.45, 1.0],
                       ),
                     ),
                   ),
-                  Positioned(
-                    right: -30,
-                    top: 30,
-                    child: Icon(programa.icono, size: 220, color: Colors.white.withValues(alpha: 0.15)),
-                  ),
+                  // Icono decorativo solo si NO hay foto
+                  if (hero == null)
+                    Positioned(
+                      right: -30,
+                      top: 30,
+                      child: Icon(programa.icono, size: 220, color: Colors.white.withValues(alpha: 0.15)),
+                    ),
                   Positioned(
                     left: 16,
                     right: 16,
                     bottom: 70,
                     child: Text(programa.lema,
-                        style: GoogleFonts.montserrat(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+                        style: GoogleFonts.montserrat(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600,
+                            shadows: [Shadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 6)])),
                   ),
                 ],
               ),
@@ -259,6 +312,20 @@ class ProgramaDetailScreen extends StatelessWidget {
                   Text(programa.descripcion,
                       style: GoogleFonts.poppins(fontSize: 13.5, height: 1.5, color: AppColors.negro)),
                   const SizedBox(height: 18),
+
+                  // Ilustración ambient (si existe)
+                  if (programa.ambientAsset != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 18),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: AspectRatio(
+                          aspectRatio: 1,
+                          child: Image.asset(programa.ambientAsset!, fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+                        ),
+                      ),
+                    ),
 
                   // Impacto
                   _ImpactoStrip(programa: programa),
@@ -473,11 +540,30 @@ class EventoDetailScreen extends StatelessWidget {
               background: Stack(
                 fit: StackFit.expand,
                 children: [
-                  Container(color: color),
-                  Positioned(
-                    right: -40,
-                    top: -20,
-                    child: Icon(evento.programa.icono, size: 240, color: Colors.white.withValues(alpha: 0.15)),
+                  if (evento.programa.heroAsset != null)
+                    Image.asset(evento.programa.heroAsset!, fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(color: color))
+                  else ...[
+                    Container(color: color),
+                    Positioned(
+                      right: -40,
+                      top: -20,
+                      child: Icon(evento.programa.icono, size: 240, color: Colors.white.withValues(alpha: 0.15)),
+                    ),
+                  ],
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withValues(alpha: 0.15),
+                          Colors.transparent,
+                          Colors.black.withValues(alpha: 0.7),
+                        ],
+                        stops: const [0.0, 0.4, 1.0],
+                      ),
+                    ),
                   ),
                   Positioned(
                     bottom: 16,
@@ -497,7 +583,8 @@ class EventoDetailScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 8),
                         Text(evento.titulo,
-                            style: GoogleFonts.montserrat(fontSize: 20, fontWeight: FontWeight.w800, color: Colors.white)),
+                            style: GoogleFonts.montserrat(fontSize: 20, fontWeight: FontWeight.w800, color: Colors.white,
+                                shadows: [Shadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 8)])),
                       ],
                     ),
                   ),

@@ -203,6 +203,30 @@ extension ProgramaSocialX on ProgramaSocial {
       case ProgramaSocial.desarmarte: return const Color(0xFFE6323C);
     }
   }
+
+  /// Logo del programa (PNG si existe, null si todavía no hay arte oficial).
+  String? get logoAsset {
+    switch (this) {
+      case ProgramaSocial.cuidarte:   return 'assets/social/cuidarte_logo.png';
+      default: return null;
+    }
+  }
+
+  /// Hero / banner fotográfico del programa.
+  String? get heroAsset {
+    switch (this) {
+      case ProgramaSocial.cuidarte:   return 'assets/social/cuidarte_hero.png';
+      default: return null;
+    }
+  }
+
+  /// Ilustración ambient (decorativa) del programa.
+  String? get ambientAsset {
+    switch (this) {
+      case ProgramaSocial.cuidarte:   return 'assets/social/cuidarte_ambient.png';
+      default: return null;
+    }
+  }
 }
 
 class SocialEvent {

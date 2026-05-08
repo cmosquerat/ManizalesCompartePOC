@@ -727,7 +727,7 @@ const List<Business> kBusinesses = [
     tipo: BusinessType.cafe,
     descripcion:
         'Café de origen con vista a la Plaza de Bolívar y la Catedral. Repostería artesanal y métodos de extracción especializados.',
-    foto: 'assets/fotos/catedral_basilica_de_manizales.jpg',
+    foto: 'assets/fotos/tazzioli.jpg',
     logo: 'assets/images/Logo_positivo.svg',
     lat: 5.0690,
     lng: -75.5172,
@@ -746,7 +746,7 @@ const List<Business> kBusinesses = [
     tipo: BusinessType.hotel,
     descripcion:
         'Aguas termales naturales con vista al Nevado del Ruiz. Spa, hospedaje y experiencias de bienestar en plena cordillera.',
-    foto: 'assets/fotos/atardecer_en_la_cumbre.jpg',
+    foto: 'assets/fotos/termales_ruiz.jpg',
     logo: 'assets/images/Logo_positivo.svg',
     lat: 4.9430,
     lng: -75.3760,
@@ -765,7 +765,7 @@ const List<Business> kBusinesses = [
     tipo: BusinessType.restaurante,
     descripcion:
         'Cocina típica del Paisaje Cultural Cafetero con toques de autor. Bandeja paisa, trucha del Ruiz y postres caldenses.',
-    foto: 'assets/fotos/feria_de_manizales.jpg',
+    foto: 'assets/fotos/la_suiza.png',
     logo: 'assets/images/Logo_positivo.svg',
     lat: 5.0640,
     lng: -75.5095,
@@ -784,7 +784,7 @@ const List<Business> kBusinesses = [
     tipo: BusinessType.tour,
     descripcion:
         'Finca cafetera tradicional. Tour del café, hospedaje rural y experiencias auténticas del PCC.',
-    foto: 'assets/fotos/oro_rojo.jpg',
+    foto: 'assets/fotos/hacienda_venecia.jpg',
     logo: 'assets/images/Logo_positivo.svg',
     lat: 5.0080,
     lng: -75.6210,
@@ -803,7 +803,7 @@ const List<Business> kBusinesses = [
     tipo: BusinessType.hotel,
     descripcion:
         'Hotel boutique en el sector Cable, cerca de Estadio Palogrande y restaurantes de la zona rosa.',
-    foto: 'assets/fotos/torre_de_chipre.jpg',
+    foto: 'assets/fotos/hotel_carretero.jpg',
     logo: 'assets/images/Logo_positivo.svg',
     lat: 5.0635,
     lng: -75.5110,
