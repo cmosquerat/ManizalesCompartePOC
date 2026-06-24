@@ -31,6 +31,10 @@
 
   <title>manizales_comparte_app</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- Passkeys Web SDK: requerido por passkeys_web (dependencia transitiva de
+       supabase_flutter). Sin él, Supabase.initialize() se cuelga en web. -->
+  <script src="passkeys_bundle.js"></script>
 </head>
 <body>
   <!--

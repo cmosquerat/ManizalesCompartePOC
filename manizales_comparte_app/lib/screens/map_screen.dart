@@ -76,8 +76,8 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
         ? kSocialEvents
         : kSocialEvents.where((e) => e.sector == state.selectedSector).toList();
     final filteredBusinesses = state.selectedSector == null
-        ? kBusinesses
-        : kBusinesses.where((b) => b.sector == state.selectedSector).toList();
+        ? state.businesses
+        : state.businesses.where((b) => b.sector == state.selectedSector).toList();
 
     return Stack(
       children: [
@@ -524,7 +524,7 @@ class _LayersPanel extends StatelessWidget {
     final items = [
       (MapLayer.tapas, 'Tapas', AppColors.rojo, Icons.place_rounded, kTapas.length),
       (MapLayer.eventos, 'Jornadas', AppColors.verde, Icons.volunteer_activism_rounded, kSocialEvents.length),
-      (MapLayer.negocios, 'Negocios', AppColors.amarillo, Icons.storefront_rounded, kBusinesses.length),
+      (MapLayer.negocios, 'Negocios', AppColors.amarillo, Icons.storefront_rounded, state.businesses.length),
     ];
     return Container(
       width: 200,

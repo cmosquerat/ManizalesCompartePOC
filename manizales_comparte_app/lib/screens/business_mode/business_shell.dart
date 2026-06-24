@@ -2,14 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../config/theme.dart';
-import '../../data/mock_data.dart';
 import '../../models/models.dart';
 import '../../providers/app_state.dart';
+import 'business_form.dart';
 import 'business_overview_tab.dart';
 import 'business_products_tab.dart';
 import 'business_promotions_tab.dart';
 import 'business_redeem_tab.dart';
 import 'business_reports_tab.dart';
+import 'merchant_auth_screen.dart';
 
 class BusinessShell extends StatefulWidget {
   const BusinessShell({super.key});
@@ -42,6 +43,21 @@ class _BusinessShellState extends State<BusinessShell> {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
+
+    // Gate de autenticación del comerciante.
+    if (!state.isMerchantSignedIn) {
+      return const MerchantAuthScreen();
+    }
+    if (state.myBusinessesLoading && state.myBusinesses.isEmpty) {
+      return const Scaffold(
+        backgroundColor: Color(0xFFF4F5F7),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (state.myBusinesses.isEmpty) {
+      return const _NoBusinessView();
+    }
+
     final biz = state.activeBusiness;
     final wide = MediaQuery.of(context).size.width >= 720;
 
@@ -207,6 +223,10 @@ class _BusinessSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
+    final mine = state.myBusinesses;
+    final value = mine.any((b) => b.id == state.activeBusinessId)
+        ? state.activeBusinessId
+        : (mine.isNotEmpty ? mine.first.id : null);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
@@ -216,27 +236,108 @@ class _BusinessSelector extends StatelessWidget {
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
-          value: state.activeBusinessId,
+          value: value,
           isExpanded: true,
           icon: const Icon(Icons.unfold_more_rounded, size: 16, color: AppColors.gris),
           style: GoogleFonts.poppins(fontSize: 11.5, color: AppColors.negro, fontWeight: FontWeight.w600),
-          items: kBusinesses
-              .map((b) => DropdownMenuItem(
-                    value: b.id,
-                    child: Row(
-                      children: [
-                        Icon(b.tipo.icono, size: 13, color: AppColors.gris),
-                        const SizedBox(width: 6),
-                        Flexible(
-                          child: Text(b.nombre, overflow: TextOverflow.ellipsis),
-                        ),
-                      ],
-                    ),
-                  ))
-              .toList(),
+          items: [
+            ...mine.map((b) => DropdownMenuItem(
+                  value: b.id,
+                  child: Row(
+                    children: [
+                      Icon(b.tipo.icono, size: 13, color: AppColors.gris),
+                      const SizedBox(width: 6),
+                      Flexible(child: Text(b.nombre, overflow: TextOverflow.ellipsis)),
+                    ],
+                  ),
+                )),
+            DropdownMenuItem(
+              value: '__edit__',
+              child: Row(children: const [
+                Icon(Icons.edit_rounded, size: 13, color: AppColors.turquesa),
+                SizedBox(width: 6),
+                Text('Editar este negocio'),
+              ]),
+            ),
+            DropdownMenuItem(
+              value: '__new__',
+              child: Row(children: const [
+                Icon(Icons.add_business_rounded, size: 13, color: AppColors.rojo),
+                SizedBox(width: 6),
+                Text('Registrar otro negocio'),
+              ]),
+            ),
+          ],
           onChanged: (v) {
-            if (v != null) context.read<AppState>().switchBusiness(v);
+            if (v == null) return;
+            if (v == '__new__') {
+              showBusinessEditor(context);
+            } else if (v == '__edit__') {
+              showBusinessEditor(context, business: state.activeBusiness);
+            } else {
+              context.read<AppState>().switchBusiness(v);
+            }
           },
+        ),
+      ),
+    );
+  }
+}
+
+class _NoBusinessView extends StatelessWidget {
+  const _NoBusinessView();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF4F5F7),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(colors: [AppColors.rojo, Color(0xFFFFD122)]),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Icon(Icons.add_business_rounded, color: Colors.white, size: 36),
+                ),
+                const SizedBox(height: 18),
+                Text('Aún no tienes un negocio',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.montserrat(fontSize: 20, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 8),
+                Text(
+                  'Registra tu negocio para publicar productos, promociones y empezar a recibir Fermines de los visitantes.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(fontSize: 13, color: AppColors.gris, height: 1.5),
+                ),
+                const SizedBox(height: 22),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => showBusinessEditor(context),
+                    icon: const Icon(Icons.add_rounded),
+                    label: Text('Registrar mi negocio', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
+                    style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 15)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextButton.icon(
+                  onPressed: () => context.read<AppState>().signOutMerchant(),
+                  icon: const Icon(Icons.logout_rounded, size: 16, color: AppColors.gris),
+                  label: Text('Cerrar sesión',
+                      style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.gris)),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

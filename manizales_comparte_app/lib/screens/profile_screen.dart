@@ -351,7 +351,7 @@ class _RoleSwitch extends StatelessWidget {
                     context.read<AppState>().switchRole(AppRole.business);
                   },
                   icon: const Icon(Icons.arrow_forward_rounded, size: 16),
-                  label: Text('Entrar como El Sombrerero',
+                  label: Text('Entrar al panel de comerciante',
                       style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.amarillo,

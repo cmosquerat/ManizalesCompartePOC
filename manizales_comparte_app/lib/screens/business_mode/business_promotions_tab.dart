@@ -2,24 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../config/theme.dart';
-import '../../data/mock_data.dart';
 import '../../models/models.dart';
 import '../../providers/app_state.dart';
+import 'editors.dart';
 
-class BusinessPromotionsTab extends StatefulWidget {
+class BusinessPromotionsTab extends StatelessWidget {
   const BusinessPromotionsTab({super.key});
-
-  @override
-  State<BusinessPromotionsTab> createState() => _BusinessPromotionsTabState();
-}
-
-class _BusinessPromotionsTabState extends State<BusinessPromotionsTab> {
-  final Set<String> _pausadas = {};
 
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    final promos = kPromotions.where((p) => p.businessId == state.activeBusinessId).toList();
+    final promos = state.promotionsFor(state.activeBusinessId);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -40,24 +33,37 @@ class _BusinessPromotionsTabState extends State<BusinessPromotionsTab> {
                 ),
               ),
               ElevatedButton.icon(
-                onPressed: () {},
+                onPressed: () => showPromotionEditor(context, businessId: state.activeBusinessId),
                 icon: const Icon(Icons.add_rounded, size: 18),
                 label: Text('Nueva promo', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 12)),
               ),
             ],
           ),
           const SizedBox(height: 18),
-          ...promos.map((p) => _PromoRow(
-                promo: p,
-                paused: _pausadas.contains(p.id),
-                onToggle: (v) => setState(() {
-                  if (v) {
-                    _pausadas.remove(p.id);
-                  } else {
-                    _pausadas.add(p.id);
-                  }
-                }),
-              )),
+          if (promos.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(28),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12)],
+              ),
+              child: Column(
+                children: [
+                  Icon(Icons.local_offer_outlined, size: 36, color: Colors.grey.shade400),
+                  const SizedBox(height: 10),
+                  Text('Sin promociones todavía',
+                      style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 4),
+                  Text('Crea una promo para atraer a quienes capturan tapas cerca.',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.poppins(fontSize: 11.5, color: AppColors.gris)),
+                ],
+              ),
+            )
+          else
+            ...promos.map((p) => _PromoRow(promo: p)),
         ],
       ),
     );
@@ -66,12 +72,11 @@ class _BusinessPromotionsTabState extends State<BusinessPromotionsTab> {
 
 class _PromoRow extends StatelessWidget {
   final Promotion promo;
-  final bool paused;
-  final ValueChanged<bool> onToggle;
-  const _PromoRow({required this.promo, required this.paused, required this.onToggle});
+  const _PromoRow({required this.promo});
 
   @override
   Widget build(BuildContext context) {
+    final paused = !promo.activa;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -128,8 +133,42 @@ class _PromoRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          Switch(value: !paused, onChanged: onToggle),
-          IconButton(onPressed: () {}, icon: const Icon(Icons.edit_rounded, size: 18, color: AppColors.gris)),
+          Switch(
+            value: promo.activa,
+            onChanged: (v) {
+              context.read<AppState>().savePromotion(promo.copyWith(activa: v), isNew: false);
+            },
+          ),
+          IconButton(
+            tooltip: 'Editar',
+            onPressed: () => showPromotionEditor(context, promo: promo, businessId: promo.businessId),
+            icon: const Icon(Icons.edit_rounded, size: 18, color: AppColors.gris),
+          ),
+          PopupMenuButton<String>(
+            tooltip: 'Más',
+            icon: const Icon(Icons.more_vert_rounded, size: 18, color: AppColors.gris),
+            onSelected: (v) async {
+              final state = context.read<AppState>();
+              final messenger = ScaffoldMessenger.of(context);
+              if (v == 'eliminar') {
+                final ok = await _confirmDeletePromo(context, promo.titulo);
+                if (ok) {
+                  try {
+                    await state.deletePromotion(promo.id);
+                  } catch (e) {
+                    messenger.showSnackBar(SnackBar(
+                      content: Text('Error: $e'),
+                      backgroundColor: AppColors.rojo,
+                      behavior: SnackBarBehavior.floating,
+                    ));
+                  }
+                }
+              }
+            },
+            itemBuilder: (_) => [
+              const PopupMenuItem(value: 'eliminar', child: Text('Eliminar')),
+            ],
+          ),
         ],
       ),
     );
@@ -149,4 +188,25 @@ class _PromoRow extends StatelessWidget {
       ),
     );
   }
+}
+
+Future<bool> _confirmDeletePromo(BuildContext context, String titulo) async {
+  final r = await showDialog<bool>(
+    context: context,
+    builder: (_) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Text('Eliminar promoción', style: GoogleFonts.montserrat(fontWeight: FontWeight.w800)),
+      content: Text('¿Eliminar "$titulo"?', style: GoogleFonts.poppins(fontSize: 13)),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancelar', style: GoogleFonts.poppins(fontWeight: FontWeight.w700))),
+        ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.rojo),
+            child: Text('Eliminar', style: GoogleFonts.poppins(fontWeight: FontWeight.w700))),
+      ],
+    ),
+  );
+  return r ?? false;
 }

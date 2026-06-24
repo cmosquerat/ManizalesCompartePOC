@@ -15,6 +15,11 @@ dependencies:
   google_fonts:
   flutter_svg:
   fl_chart:
+  supabase_flutter:
+  image_picker:
+  cached_network_image:
+  qr_flutter:
+  mobile_scanner:
 
 dev_dependencies:
   flutter_test:

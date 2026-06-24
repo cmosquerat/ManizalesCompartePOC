@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import '../config/theme.dart';
-import '../data/mock_data.dart';
 import '../models/models.dart';
 import '../providers/app_state.dart';
+import '../widgets/media_image.dart';
 
 class BusinessDetailScreen extends StatelessWidget {
   final Business business;
@@ -12,8 +13,9 @@ class BusinessDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final productos = kBusinessProducts.where((p) => p.businessId == business.id).toList();
-    final promos = kPromotions.where((p) => p.businessId == business.id).toList();
+    final state = context.watch<AppState>();
+    final productos = state.productsFor(business.id);
+    final promos = state.promotionsFor(business.id);
 
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -28,10 +30,10 @@ class BusinessDetailScreen extends StatelessWidget {
               background: Stack(
                 fit: StackFit.expand,
                 children: [
-                  Image.asset(
-                    business.foto,
+                  MediaImage(
+                    source: business.foto,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(color: AppColors.rojo),
+                    fallback: Container(color: AppColors.rojo),
                   ),
                   Container(
                     decoration: BoxDecoration(
@@ -117,7 +119,7 @@ class BusinessDetailScreen extends StatelessWidget {
                             children: [
                               Text('Acepta Fermines',
                                   style: GoogleFonts.montserrat(fontSize: 15, fontWeight: FontWeight.w800)),
-                              Text('Hasta ${business.descuentoBaseFermines}% de descuento canjeando con tu wallet',
+                              Text('Canjea con Fermines y obtén descuentos en los productos.',
                                   style: GoogleFonts.poppins(fontSize: 11, color: AppColors.negro)),
                             ],
                           ),
@@ -236,7 +238,7 @@ class _ProductoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    final canBuy = state.ferminesBalance >= producto.precioFermines;
+    final canBuy = state.ferminesBalance >= producto.ferminesPart;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -248,14 +250,18 @@ class _ProductoCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: producto.color.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(14),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: SizedBox(
+              width: 56,
+              height: 56,
+              child: producto.foto != null && producto.foto!.isNotEmpty
+                  ? MediaImage(source: producto.foto)
+                  : Container(
+                      color: producto.color.withValues(alpha: 0.15),
+                      child: Icon(producto.icono, color: producto.color, size: 28),
+                    ),
             ),
-            child: Icon(producto.icono, color: producto.color, size: 28),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -288,18 +294,20 @@ class _ProductoCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Row(
                   children: [
-                    Text('\$${producto.precioCOP.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}',
-                        style: GoogleFonts.poppins(fontSize: 11, color: AppColors.gris, decoration: TextDecoration.lineThrough)),
-                    const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
                         color: AppColors.amarillo.withValues(alpha: 0.25),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Text('${producto.precioFermines}F',
+                      child: Text('${producto.ferminesPart}F',
                           style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w800)),
                     ),
+                    if (producto.copReal > 0) ...[
+                      const SizedBox(width: 6),
+                      Text('+ \$${producto.copReal.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}',
+                          style: GoogleFonts.poppins(fontSize: 11, color: AppColors.gris, fontWeight: FontWeight.w600)),
+                    ],
                   ],
                 ),
               ],
@@ -352,8 +360,7 @@ class _CanjeFlowScreenState extends State<CanjeFlowScreen> with TickerProviderSt
     _scanCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1800));
     _genCtrl.forward().then((_) {
       if (!mounted) return;
-      _code = (100000 + DateTime.now().millisecondsSinceEpoch % 900000).toString();
-      setState(() => _stage = _CanjeStage.awaiting);
+      _generate();
     });
   }
 
@@ -364,16 +371,23 @@ class _CanjeFlowScreenState extends State<CanjeFlowScreen> with TickerProviderSt
     super.dispose();
   }
 
-  void _simulateScan() {
-    setState(() => _stage = _CanjeStage.scanning);
-    _scanCtrl.forward(from: 0).then((_) {
+  Future<void> _generate() async {
+    try {
+      final i = await context.read<AppState>().generarCanje(widget.producto);
       if (!mounted) return;
-      // Confirmar el canje en el estado
-      final p = widget.producto;
-      context.read<AppState>().spendFermines(p.precioFermines, 'Canje en negocio: ${p.nombre}');
-      context.read<AppState>().simulateRedemption(p);
-      setState(() => _stage = _CanjeStage.done);
-    });
+      setState(() {
+        _code = i.code;
+        _stage = _CanjeStage.awaiting;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('$e'),
+        backgroundColor: AppColors.rojo,
+        behavior: SnackBarBehavior.floating,
+      ));
+      Navigator.of(context).pop();
+    }
   }
 
   @override
@@ -417,7 +431,10 @@ class _CanjeFlowScreenState extends State<CanjeFlowScreen> with TickerProviderSt
                         children: [
                           Text(widget.producto.nombre,
                               style: GoogleFonts.poppins(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.w700)),
-                          Text('${widget.producto.precioFermines} Fermines · El Sombrerero',
+                          Text(
+                              widget.producto.copReal > 0
+                                  ? '${widget.producto.ferminesPart} F + \$${widget.producto.copReal} en plata'
+                                  : '${widget.producto.ferminesPart} Fermines',
                               style: GoogleFonts.poppins(color: Colors.white60, fontSize: 11)),
                         ],
                       ),
@@ -444,7 +461,7 @@ class _CanjeFlowScreenState extends State<CanjeFlowScreen> with TickerProviderSt
       case _CanjeStage.generating:
         return _Generating(ctrl: _genCtrl);
       case _CanjeStage.awaiting:
-        return _Awaiting(code: _code);
+        return _Awaiting(code: _code, producto: widget.producto);
       case _CanjeStage.scanning:
         return _Scanning(ctrl: _scanCtrl);
       case _CanjeStage.done:
@@ -459,21 +476,20 @@ class _CanjeFlowScreenState extends State<CanjeFlowScreen> with TickerProviderSt
       case _CanjeStage.awaiting:
         return Column(
           children: [
-            Text('🪄  Modo demo',
-                style: GoogleFonts.poppins(color: Colors.white38, fontSize: 10, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 6),
+            Text('El descuento se aplica cuando el comercio valida tu código.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(color: Colors.white38, fontSize: 10.5, fontWeight: FontWeight.w500)),
+            const SizedBox(height: 8),
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: _simulateScan,
-                icon: const Icon(Icons.qr_code_scanner_rounded, size: 18),
-                label: Text('Simular escaneo del aliado',
-                    style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
+              child: ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.amarillo,
                   foregroundColor: AppColors.negro,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
+                child: Text('Listo', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
               ),
             ),
           ],
@@ -533,7 +549,8 @@ class _Generating extends StatelessWidget {
 
 class _Awaiting extends StatelessWidget {
   final String code;
-  const _Awaiting({required this.code});
+  final BusinessProduct producto;
+  const _Awaiting({required this.code, required this.producto});
 
   @override
   Widget build(BuildContext context) {
@@ -557,17 +574,38 @@ class _Awaiting extends StatelessWidget {
             ),
             child: Column(
               children: [
-                SizedBox(
-                  width: 200,
-                  height: 200,
-                  child: CustomPaint(painter: _MockQrPainter()),
+                QrImageView(
+                  data: code,
+                  version: QrVersions.auto,
+                  size: 200,
+                  padding: EdgeInsets.zero,
                 ),
                 const SizedBox(height: 10),
                 Text(_formatCode(code),
                     style: GoogleFonts.robotoMono(fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: 4)),
                 const SizedBox(height: 2),
-                Text('o ingresa el código manualmente',
+                Text('o dicta este código al comercio',
                     style: GoogleFonts.poppins(fontSize: 9.5, color: AppColors.gris)),
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: AppColors.amarillo.withValues(alpha: 0.25),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text('-${producto.ferminesPart} F',
+                          style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w800)),
+                    ),
+                    if (producto.copReal > 0) ...[
+                      const SizedBox(width: 8),
+                      Text('+ \$${producto.copReal} en caja',
+                          style: GoogleFonts.poppins(fontSize: 11, color: AppColors.gris, fontWeight: FontWeight.w600)),
+                    ],
+                  ],
+                ),
               ],
             ),
           ),

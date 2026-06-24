@@ -33,11 +33,14 @@ class BusinessOverviewTab extends StatelessWidget {
           LayoutBuilder(builder: (ctx, c) {
             final cols = c.maxWidth > 720 ? 4 : 2;
             final w = (c.maxWidth - 16 * (cols - 1)) / cols;
+            final dineroCaja = todayReds.fold<int>(0, (s, r) => s + r.totalCOP);
+            final ferminesDesc = todayReds.fold<int>(0, (s, r) => s + r.totalFermines);
+            String money(int v) => v.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.');
             final kpis = [
-              _Kpi('Visitas a la ficha', '$visitas', Icons.visibility_rounded, AppColors.turquesa, '+12% vs. ayer'),
-              _Kpi('Canjes hoy', '${todayReds.length}', Icons.check_circle_rounded, AppColors.verde, '+${todayReds.length * 8}% vs. ayer'),
-              _Kpi('Fermines recibidos', '${todayReds.fold<int>(0, (s, r) => s + r.totalFermines)}', Icons.monetization_on_rounded, AppColors.amarillo, '\$${(todayReds.fold<int>(0, (s, r) => s + r.totalCOP) / 1000).toStringAsFixed(0)}k COP'),
-              _Kpi('Top producto', _topProducto(reds), Icons.star_rounded, AppColors.rojo, '${reds.length} canjes total'),
+              _Kpi('Visitas a la ficha', '$visitas', Icons.visibility_rounded, AppColors.turquesa, 'hoy'),
+              _Kpi('Canjes hoy', '${todayReds.length}', Icons.check_circle_rounded, AppColors.verde, '${reds.length} en total'),
+              _Kpi('Dinero en caja', '\$${money(dineroCaja)}', Icons.payments_rounded, AppColors.verde, 'recibido hoy'),
+              _Kpi('Descuento dado', '$ferminesDesc F', Icons.local_offer_rounded, AppColors.amarillo, '= \$${money(ferminesDesc * 1000)}'),
             ];
             return Wrap(
               spacing: 16,
@@ -109,15 +112,6 @@ class BusinessOverviewTab extends StatelessWidget {
     );
   }
 
-  String _topProducto(List<Redemption> reds) {
-    if (reds.isEmpty) return '—';
-    final counts = <String, int>{};
-    for (final r in reds) {
-      counts[r.productName] = (counts[r.productName] ?? 0) + 1;
-    }
-    final entry = counts.entries.reduce((a, b) => a.value >= b.value ? a : b);
-    return entry.key.length > 18 ? '${entry.key.substring(0, 16)}…' : entry.key;
-  }
 }
 
 bool _sameDay(DateTime a, DateTime b) =>

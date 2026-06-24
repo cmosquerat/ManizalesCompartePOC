@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../config/theme.dart';
-import '../../data/mock_data.dart';
 import '../../models/models.dart';
 import '../../providers/app_state.dart';
+import '../../widgets/media_image.dart';
+import 'editors.dart';
 
 class BusinessProductsTab extends StatelessWidget {
   const BusinessProductsTab({super.key});
@@ -12,7 +13,7 @@ class BusinessProductsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    final productos = kBusinessProducts.where((p) => p.businessId == state.activeBusinessId).toList();
+    final productos = state.productsFor(state.activeBusinessId);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -33,7 +34,7 @@ class BusinessProductsTab extends StatelessWidget {
                 ),
               ),
               ElevatedButton.icon(
-                onPressed: () => _showAddDialog(context),
+                onPressed: () => showProductEditor(context, businessId: state.activeBusinessId),
                 icon: const Icon(Icons.add_rounded, size: 18),
                 label: Text('Nuevo producto', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 12)),
               ),
@@ -76,27 +77,27 @@ class BusinessProductsTab extends StatelessWidget {
             child: Column(
               children: [
                 _TableHeader(),
-                ...productos.map((p) => _ProductRow(producto: p)),
+                if (productos.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.all(28),
+                    child: Column(
+                      children: [
+                        Icon(Icons.inventory_2_outlined, size: 36, color: Colors.grey.shade400),
+                        const SizedBox(height: 10),
+                        Text('Aún no tienes productos',
+                            style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700)),
+                        const SizedBox(height: 4),
+                        Text('Toca "Nuevo producto" para publicar el primero con su foto y precio.',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.poppins(fontSize: 11.5, color: AppColors.gris)),
+                      ],
+                    ),
+                  )
+                else
+                  ...productos.map((p) => _ProductRow(producto: p)),
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  void _showAddDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Nuevo producto', style: GoogleFonts.montserrat(fontWeight: FontWeight.w800)),
-        content: Text(
-          'En la versión completa podrás cargar foto, descripción, definir precio en COP y ratio de Fermines (1F = \$100 COP por defecto).',
-          style: GoogleFonts.poppins(fontSize: 12.5, color: AppColors.gris),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text('Listo', style: GoogleFonts.poppins(fontWeight: FontWeight.w700))),
         ],
       ),
     );
@@ -169,14 +170,18 @@ class _ProductRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: producto.color.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: SizedBox(
+              width: 36,
+              height: 36,
+              child: producto.foto != null && producto.foto!.isNotEmpty
+                  ? MediaImage(source: producto.foto)
+                  : Container(
+                      color: producto.color.withValues(alpha: 0.15),
+                      child: Icon(producto.icono, size: 18, color: producto.color),
+                    ),
             ),
-            child: Icon(producto.icono, size: 18, color: producto.color),
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -234,10 +239,73 @@ class _ProductRow extends StatelessWidget {
               ],
             ),
           ),
-          IconButton(onPressed: () {}, icon: const Icon(Icons.edit_rounded, size: 16, color: AppColors.gris)),
-          IconButton(onPressed: () {}, icon: const Icon(Icons.more_horiz_rounded, size: 16, color: AppColors.gris)),
+          IconButton(
+            tooltip: 'Editar',
+            onPressed: () => showProductEditor(context,
+                product: producto, businessId: producto.businessId),
+            icon: const Icon(Icons.edit_rounded, size: 16, color: AppColors.gris),
+          ),
+          PopupMenuButton<String>(
+            tooltip: 'Más',
+            icon: const Icon(Icons.more_horiz_rounded, size: 16, color: AppColors.gris),
+            onSelected: (v) async {
+              final state = context.read<AppState>();
+              final messenger = ScaffoldMessenger.of(context);
+              try {
+                if (v == 'destacar') {
+                  await state.saveProduct(
+                      producto.copyWith(destacado: !producto.destacado),
+                      isNew: false);
+                } else if (v == 'visible') {
+                  await state.saveProduct(
+                      producto.copyWith(activo: !producto.activo),
+                      isNew: false);
+                } else if (v == 'eliminar') {
+                  final ok = await _confirmDelete(context, producto.nombre);
+                  if (ok) await state.deleteProduct(producto.id);
+                }
+              } catch (e) {
+                messenger.showSnackBar(SnackBar(
+                  content: Text('Error: $e'),
+                  backgroundColor: AppColors.rojo,
+                  behavior: SnackBarBehavior.floating,
+                ));
+              }
+            },
+            itemBuilder: (_) => [
+              PopupMenuItem(
+                  value: 'destacar',
+                  child: Text(producto.destacado ? 'Quitar destacado' : 'Destacar')),
+              PopupMenuItem(
+                  value: 'visible',
+                  child: Text(producto.activo ? 'Ocultar de la app' : 'Mostrar en la app')),
+              const PopupMenuItem(value: 'eliminar', child: Text('Eliminar')),
+            ],
+          ),
         ],
       ),
     );
   }
+}
+
+Future<bool> _confirmDelete(BuildContext context, String nombre) async {
+  final r = await showDialog<bool>(
+    context: context,
+    builder: (_) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Text('Eliminar', style: GoogleFonts.montserrat(fontWeight: FontWeight.w800)),
+      content: Text('¿Eliminar "$nombre"? Esta acción no se puede deshacer.',
+          style: GoogleFonts.poppins(fontSize: 13)),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancelar', style: GoogleFonts.poppins(fontWeight: FontWeight.w700))),
+        ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.rojo),
+            child: Text('Eliminar', style: GoogleFonts.poppins(fontWeight: FontWeight.w700))),
+      ],
+    ),
+  );
+  return r ?? false;
 }

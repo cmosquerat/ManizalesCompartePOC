@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'config/supabase_config.dart';
 import 'config/theme.dart';
 import 'providers/app_state.dart';
 import 'screens/splash_screen.dart';
@@ -17,9 +21,31 @@ class _WebScrollBehavior extends MaterialScrollBehavior {
       };
 }
 
+/// Bandera global: true si Supabase quedó listo. Si no, la app corre con
+/// datos semilla (mock) sin romperse.
+bool supabaseReady = false;
+
 void main() {
-  WidgetsFlutterBinding.ensureInitialized();
-  runApp(const ManizalesComparteApp());
+  runZonedGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
+    // Lleva CUALQUIER error de Flutter al stdout de `flutter run`.
+    FlutterError.onError = (details) {
+      debugPrint('FLUTTER_ERROR: ${details.exceptionAsString()}');
+      FlutterError.presentError(details);
+    };
+    try {
+      await Supabase.initialize(
+        url: SupabaseConfig.url,
+        publishableKey: SupabaseConfig.publishableKey,
+      ).timeout(const Duration(seconds: 8));
+      supabaseReady = true;
+      debugPrint('SUPABASE_OK');
+    } catch (e) {
+      // Sin Supabase la app sigue funcionando con datos semilla (mock).
+      debugPrint('SUPABASE_FAIL: $e');
+    }
+    runApp(const ManizalesComparteApp());
+  }, (e, st) => debugPrint('ZONE_ERROR: $e'));
 }
 
 class ManizalesComparteApp extends StatelessWidget {
